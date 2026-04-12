@@ -1,0 +1,99 @@
+.about-page {
+  min-height: calc(100vh - 84px);
+  padding: 2rem 1.5rem 3rem;
+}
+
+.about-card {
+  max-width: 980px;
+  margin: 0 auto;
+  border: 1px solid rgba(92, 76, 53, 0.12);
+  border-radius: 30px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: clamp(1.4rem, 3vw, 2.4rem);
+}
+
+.about-eyebrow {
+  margin: 0 0 0.6rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.about-card h1 {
+  margin-bottom: 0.95rem;
+}
+
+.about-intro {
+  color: var(--text);
+  line-height: 1.75;
+  max-width: 72ch;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1.35rem;
+}
+
+.about-grid article {
+  border: 1px solid rgba(92, 76, 53, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1rem;
+}
+
+.about-grid h2 {
+  margin-bottom: 0.55rem;
+  font-size: 1.2rem;
+}
+
+.about-grid p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.35rem;
+}
+
+.about-primary-action,
+.about-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.8rem 1.2rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.about-primary-action {
+  color: #ffffff;
+  background: linear-gradient(135deg, #8c6239, #6f4d2c);
+  box-shadow: 0 12px 24px rgba(44, 31, 18, 0.12);
+}
+
+.about-secondary-action {
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(124, 58, 237, 0.18);
+}
+
+@media (max-width: 640px) {
+  .about-page {
+    padding: 1.3rem 1rem 2.2rem;
+  }
+
+  .about-card {
+    border-radius: 24px;
+  }
+}

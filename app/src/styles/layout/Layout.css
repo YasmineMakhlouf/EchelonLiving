@@ -1,0 +1,123 @@
+.layout-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(168, 139, 250, 0.34), transparent 36%),
+    radial-gradient(circle at 86% 12%, rgba(196, 181, 253, 0.3), transparent 32%),
+    linear-gradient(180deg, #fcfaff 0%, #f6f2ff 100%);
+  background-size: 180% 180%, 180% 180%, 100% 100%;
+  animation: layoutBackgroundShift 12s ease-in-out infinite alternate;
+}
+
+.layout-shell::before,
+.layout-shell::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.layout-shell::before {
+  width: clamp(360px, 44vw, 700px);
+  height: clamp(360px, 44vw, 700px);
+  top: -18vh;
+  left: -34vw;
+  filter: blur(1.1px);
+  background: radial-gradient(
+    circle at 35% 35%,
+    rgba(76, 29, 149, 0.54) 0%,
+    rgba(91, 33, 182, 0.36) 42%,
+    rgba(76, 29, 149, 0) 72%
+  );
+  animation: layoutBubbleOrbit 22s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.layout-shell::after {
+  width: clamp(300px, 34vw, 500px);
+  height: clamp(300px, 34vw, 500px);
+  bottom: -140px;
+  left: -90px;
+  filter: blur(0.5px);
+  background: radial-gradient(circle, rgba(192, 132, 252, 0.28), rgba(192, 132, 252, 0));
+  animation: layoutFloat 13s ease-in-out infinite;
+}
+
+@keyframes layoutBackgroundShift {
+  0% {
+    background-position: 0% 0%, 100% 0%, 0% 0%;
+  }
+
+  50% {
+    background-position: 30% 18%, 72% 30%, 0% 0%;
+  }
+
+  100% {
+    background-position: 12% 40%, 90% 16%, 0% 0%;
+  }
+}
+
+@keyframes layoutBubbleOrbit {
+  0% {
+    transform: translate3d(-14vw, -10vh, 0) scale(0.88);
+  }
+
+  25% {
+    transform: translate3d(36vw, 8vh, 0) scale(1.05);
+  }
+
+  50% {
+    transform: translate3d(70vw, 34vh, 0) scale(1);
+  }
+
+  75% {
+    transform: translate3d(20vw, 58vh, 0) scale(1.12);
+  }
+
+  100% {
+    transform: translate3d(-8vw, 78vh, 0) scale(0.94);
+  }
+}
+
+@keyframes layoutFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(20px, -14px, 0) scale(1.08);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.layout-container {
+  width: min(1200px, calc(100% - 2.5rem));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.layout-main {
+  flex: 1;
+  padding: 1.5rem 0 2.25rem;
+}
+
+.layout-main-content {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .layout-container {
+    width: min(1200px, calc(100% - 1.5rem));
+  }
+
+  .layout-main {
+    padding: 1rem 0 1.5rem;
+  }
+}

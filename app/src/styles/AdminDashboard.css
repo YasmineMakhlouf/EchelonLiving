@@ -1,0 +1,253 @@
+.admin-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.admin-page h1 {
+  margin-bottom: 1rem;
+  color: #1f2937;
+}
+
+.admin-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.admin-success {
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.admin-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-panel h2 {
+  margin-top: 0;
+  color: #111827;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+}
+
+.admin-form-grid input,
+.admin-table select,
+.admin-table input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
+.admin-table th {
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 700;
+}
+
+.admin-actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-btn {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--accent) 0%, #a06a3d 100%);
+  color: white;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.16);
+}
+
+.admin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.admin-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-hover) 0%, #8e5934 100%);
+  transform: translateY(-1px);
+}
+
+.admin-btn-secondary {
+  background: rgba(255, 253, 250, 0.95);
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+.admin-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(124, 58, 237, 0.34);
+}
+
+.admin-btn-danger {
+  background: linear-gradient(135deg, var(--error) 0%, #d35c46 100%);
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a73f2d 0%, #c24f3b 100%);
+}
+
+.admin-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-kpi-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.admin-kpi-card h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.admin-kpi-card p {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.admin-product-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.admin-product-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.admin-product-form textarea,
+.admin-product-form select,
+.admin-product-form input {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.admin-product-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-file-input-label input[type="file"] {
+  padding: 0.4rem;
+}
+
+.admin-image-preview-wrap p {
+  margin: 0 0 0.5rem;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.admin-image-preview {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  object-fit: cover;
+}
+
+.admin-actions-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 200;
+}
+
+.admin-modal {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 1rem;
+  box-shadow: 0 15px 35px rgba(17, 24, 39, 0.2);
+}
+
+.admin-modal h3 {
+  margin: 0 0 0.5rem;
+  color: #111827;
+}
+
+.admin-modal p {
+  margin: 0 0 1rem;
+  color: #374151;
+}
+
+@media (max-width: 900px) {
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-product-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

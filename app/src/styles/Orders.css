@@ -1,0 +1,152 @@
+.orders-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.orders-header h1 {
+  margin: 0;
+  color: #111827;
+}
+
+.orders-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.orders-summary strong {
+  font-size: 1.1rem;
+  color: #0f766e;
+}
+
+.orders-note {
+  color: #6b7280;
+  padding: 0.75rem 0;
+}
+
+.orders-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.orders-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.order-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.order-card-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+.order-card-header p {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.order-total {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.order-items {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.order-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.order-item-main h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.order-item-main p {
+  margin: 0.25rem 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.order-item-main small {
+  color: #6b7280;
+  display: block;
+}
+
+.order-item-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.2rem;
+  color: #374151;
+}
+
+.order-item-meta strong {
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+  .orders-page {
+    padding: 1rem;
+  }
+
+  .orders-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .orders-summary {
+    align-items: flex-start;
+  }
+
+  .order-item {
+    grid-template-columns: 1fr;
+  }
+
+  .order-item-meta {
+    align-items: flex-start;
+  }
+}
