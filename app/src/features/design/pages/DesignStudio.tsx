@@ -3,7 +3,9 @@
  * Frontend pages module for Echelon Living app.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import { submitDesignRequest } from "../services/designService";
+import type { RootState } from "../../../store";
 import "../../../styles/DesignStudio.css";
 
 type BrushColor = "#111827" | "#f59e0b" | "#ec4899" | "#8b5cf6" | "#22c55e" | "#0ea5e9";
@@ -11,6 +13,7 @@ type BrushColor = "#111827" | "#f59e0b" | "#ec4899" | "#8b5cf6" | "#22c55e" | "#
 const brushColors: BrushColor[] = ["#111827", "#0ea5e9", "#8b5cf6", "#ec4899", "#22c55e", "#f59e0b"];
 
 export default function DesignStudio() {
+  const user = useSelector((state: RootState) => state.auth.user);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
@@ -177,10 +180,17 @@ export default function DesignStudio() {
       setError(null);
       setSuccessMessage(null);
 
+      if (!user || !user.id) {
+        setError("You must be logged in to submit a design request.");
+        setSubmitting(false);
+        return;
+      }
+
       await submitDesignRequest({
         title,
         notes,
         designDataUrl,
+        userId: user.id,
       });
 
       setSuccessMessage("Your design request was sent to the admin review queue.");

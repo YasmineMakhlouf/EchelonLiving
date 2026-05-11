@@ -43,7 +43,7 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
 };
 
 export const getOrderHistory = (userId: number): Promise<OrderWithItems[]> => {
-  return graphqlRequest<{ orderHistory: Array<{ id: number; userId: number; total: number; status: string }> }>(
+  return graphqlRequest<{ orderHistory: Array< {id: number; userId: number; total: number; status: string } > }>(
     `
       query OrderHistory($userId: Int!) {
         orderHistory(userId: $userId) {
@@ -59,13 +59,13 @@ export const getOrderHistory = (userId: number): Promise<OrderWithItems[]> => {
     .then((res) => {
       const raw = res.orderHistory || [];
       // Normalize server response to the client shape and keep items empty unless the API exposes them.
-      return raw.map((o: { id: number; userId: number; total: number; status: string }) => ({
+      return raw.map((o) => ({
         id: o.id,
-        user_id: o.userId ?? o.user_id,
-        total_price: o.total ?? o.total_price,
+        user_id: o.userId,
+        total_price: o.total,
         status: o.status,
         items: [],
-      }));
+      } as OrderWithItems));
     })
     .catch((error) => {
       const status = (error as { response?: { status?: number } }).response?.status;
