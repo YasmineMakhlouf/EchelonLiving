@@ -2,26 +2,30 @@
  * Register
  * Frontend pages module for Echelon Living app.
  */
-import { useState } from "react";
 import type { FormEvent } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
-import { register } from "../services/authService";
+import {
+  setRegisterEmail,
+  setRegisterError,
+  setRegisterFieldErrors,
+  setRegisterName,
+  setRegisterPassword,
+  setRegisterSubmitting,
+} from "../../../store/slices/authUiSlice";
+import type { RootState } from "../../../store";
+import { useAuthRedux } from "../../../store/hooks/useAuthRedux";
 
 function Register() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{
-    name?: string;
-    email?: string;
-    password?: string;
-  }>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register } = useAuthRedux();
+  const dispatch = useDispatch();
+  const name = useSelector((state: RootState) => state.authUi.registerName);
+  const email = useSelector((state: RootState) => state.authUi.registerEmail);
+  const password = useSelector((state: RootState) => state.authUi.registerPassword);
+  const error = useSelector((state: RootState) => state.authUi.registerError);
+  const fieldErrors = useSelector((state: RootState) => state.authUi.registerFieldErrors);
+  const isSubmitting = useSelector((state: RootState) => state.authUi.registerSubmitting);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -47,33 +51,28 @@ function Register() {
       errors.password = "Password must be at least 6 characters";
     }
 
-    setFieldErrors(errors);
+    dispatch(setRegisterFieldErrors(errors));
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
+    dispatch(setRegisterError(null));
 
     if (!validateForm()) {
       return;
     }
 
-    setIsSubmitting(true);
+    dispatch(setRegisterSubmitting(true));
 
     try {
-      const { user, token } = await register({
-        name,
-        email,
-        password,
-      });
-      login(user, token);
+      await register(name, email, password);
       navigate("/products");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Registration failed. Please try again.";
-      setError(message);
+      dispatch(setRegisterError(message));
     } finally {
-      setIsSubmitting(false);
+      dispatch(setRegisterSubmitting(false));
     }
   };
 
@@ -92,7 +91,7 @@ function Register() {
           id="name"
           type="text"
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => dispatch(setRegisterName(event.target.value))}
           required
         />
         {fieldErrors.name && <p className="auth-field-error">{fieldErrors.name}</p>}
@@ -102,7 +101,7 @@ function Register() {
           id="email"
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => dispatch(setRegisterEmail(event.target.value))}
           required
         />
         {fieldErrors.email && <p className="auth-field-error">{fieldErrors.email}</p>}
@@ -112,7 +111,7 @@ function Register() {
           id="password"
           type="password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => dispatch(setRegisterPassword(event.target.value))}
           required
         />
         {fieldErrors.password && <p className="auth-field-error">{fieldErrors.password}</p>}

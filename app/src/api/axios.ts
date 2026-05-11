@@ -5,7 +5,7 @@
 import axios, { AxiosHeaders } from "axios";
 import { isTokenExpired } from "../utils/authToken";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001/api/v1";
 const AUTH_LOGOUT_EVENT = "echelon-auth-logout";
 
 const api = axios.create({

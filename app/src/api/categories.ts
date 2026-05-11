@@ -3,8 +3,17 @@
  * Frontend api module for Echelon Living app.
  */
 import api from "./axios";
+import { graphqlRequest } from "./graphql";
 
 export const getCategories = async () => {
-  const response = await api.get("/categories");
-  return response.data;
+  return graphqlRequest<{ categories: { id: number; name: string }[] }>(
+    `
+      query {
+        categories {
+          id
+          name
+        }
+      }
+    `,
+  ).then((res) => res.categories || []);
 };

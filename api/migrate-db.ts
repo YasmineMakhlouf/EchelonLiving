@@ -39,6 +39,42 @@ const migrateDatabase = async () => {
       console.log("✅ price_at_time column already exists in cart_items");
     }
 
+    // Ensure users have a password_hash column (migrate from legacy `password` if present)
+    const passwordHashColumn = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'password_hash'
+    `);
+
+    if (passwordHashColumn.rows.length === 0) {
+      console.log("Adding missing password_hash column to users table...");
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN password_hash VARCHAR(255)
+      `);
+
+      // If there is an existing `password` column (legacy), copy values into `password_hash`.
+      const passwordColumn = await pool.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'password'
+      `);
+
+      if (passwordColumn.rows.length > 0) {
+        console.log("Copying legacy plaintext/hash values from 'password' to 'password_hash' (no re-hash)");
+        await pool.query(`
+          UPDATE users
+          SET password_hash = password
+          WHERE password_hash IS NULL
+        `);
+        console.log("✅ password values copied to password_hash (consider re-hashing if needed)");
+      } else {
+        console.log("No legacy 'password' column found; password_hash initialized empty for existing users");
+      }
+    } else {
+      console.log("✅ password_hash column already exists in users");
+    }
+
     const designRequestsTable = await pool.query(`
       SELECT table_name
       FROM information_schema.tables

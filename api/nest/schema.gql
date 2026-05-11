@@ -1,0 +1,69 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AuthPayload {
+  email: String!
+  id: Int!
+  role: String!
+  token: String
+}
+
+type CartItem {
+  id: Int!
+  productId: Int!
+  quantity: Int!
+  userId: Int!
+}
+
+type Category {
+  id: Int!
+  name: String!
+}
+
+type Mutation {
+  addCartItem(productId: Int!, quantity: Int, userId: Int!): CartItem!
+  createOrder(status: String, total: String!, userId: Int!): Order!
+  login(email: String!, password: String!): AuthPayload
+  register(email: String!, password: String!, role: String): AuthPayload!
+  removeCartItem(id: Int!): Boolean!
+  updateCartItem(id: Int!, quantity: Int!): CartItem!
+}
+
+type Order {
+  id: Int!
+  items: [OrderItem!]
+  status: String!
+  total: String!
+  userId: Int!
+}
+
+type OrderItem {
+  id: Int!
+  orderId: Int!
+  price: Float
+  productId: Int!
+  product_name: String
+  quantity: Int!
+}
+
+type Product {
+  category_id: Int
+  category_name: String
+  color: String
+  description: String
+  id: Int!
+  image_url: String
+  name: String!
+  price: String!
+  stock_quantity: Int
+}
+
+type Query {
+  cartItems(userId: Int!): [CartItem!]!
+  categories: [Category!]!
+  orderHistory(userId: Int!): [Order!]!
+  product(id: Int!): Product
+  products: [Product!]!
+  productsByCategory(categoryId: Int!): [Product!]!
+}

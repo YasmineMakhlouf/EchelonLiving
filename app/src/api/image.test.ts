@@ -4,7 +4,7 @@ vi.mock("./axios", () => {
   return {
     default: {
       defaults: {
-        baseURL: "http://localhost:5000/api/v1",
+        baseURL: "http://localhost:5001/api/v1",
       },
     },
   };
@@ -25,7 +25,7 @@ describe("toAbsoluteImageUrl", () => {
   });
 
   it("prepends backend host for relative image paths", () => {
-    expect(toAbsoluteImageUrl("uploads/products/item.png")).toBe("http://localhost:5000/uploads/products/item.png");
-    expect(toAbsoluteImageUrl("/uploads/products/item.png")).toBe("http://localhost:5000/uploads/products/item.png");
+    expect(toAbsoluteImageUrl("uploads/products/item.png")).toBe("http://localhost:5001/uploads/products/item.png");
+    expect(toAbsoluteImageUrl("/uploads/products/item.png")).toBe("http://localhost:5001/uploads/products/item.png");
   });
 });

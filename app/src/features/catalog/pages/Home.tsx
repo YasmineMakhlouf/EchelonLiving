@@ -2,58 +2,58 @@
  * Home
  * Frontend pages module for Echelon Living app.
  */
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import useCatalogRefresh from "../../../hooks/useCatalogRefresh";
-import type { Category, Product } from "../services/catalogService";
+import type { RootState } from "../../../store";
 import {
   getCategories,
   getTrendingProducts,
 } from "../services/catalogService";
+import { setCategories, setTrending, setLoading, clearError } from "../../../store/slices/catalogDataSlice";
 import "../../../styles/Home.css";
 
 function Home() {
+  const dispatch = useDispatch();
   const catalogRevision = useCatalogRefresh();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [productsLoading, setProductsLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
-  const [productsError, setProductsError] = useState<string | null>(null);
+  const categories = useSelector((state: RootState) => state.catalogData.categories);
+  const trendingProducts = useSelector((state: RootState) => state.catalogData.trending);
+  const loading = useSelector((state: RootState) => state.catalogData.loading);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        setCategoriesLoading(true);
-        setCategoriesError(null);
+        dispatch(setLoading(true));
+        dispatch(clearError());
         const data = await getCategories();
-        setCategories(data);
+        dispatch(setCategories(data));
       } catch (err) {
-        setCategoriesError(err instanceof Error ? err.message : "Failed to load categories. Please try again.");
+        console.error("Failed to fetch categories:", err);
       } finally {
-        setCategoriesLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchCategories();
-  }, [catalogRevision]);
+  }, [catalogRevision, dispatch]);
 
   useEffect(() => {
     const fetchTrendingProducts = async () => {
       try {
-        setProductsLoading(true);
-        setProductsError(null);
+        dispatch(setLoading(true));
+        dispatch(clearError());
         const data = await getTrendingProducts();
-        setTrendingProducts(data);
+        dispatch(setTrending(data));
       } catch (err) {
-        setProductsError(err instanceof Error ? err.message : "Failed to load trending products. Please try again.");
+        console.error("Failed to fetch trending products:", err);
       } finally {
-        setProductsLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchTrendingProducts();
-  }, [catalogRevision]);
+  }, [catalogRevision, dispatch]);
 
   return (
     <main className="home-page page-fade-in">
@@ -104,12 +104,9 @@ function Home() {
         </aside>
       </section>
 
-      {categoriesLoading ? <p className="home-state">Loading categories...</p> : null}
-      {categoriesError ? <p className="home-state home-error">{categoriesError}</p> : null}
-      {productsLoading ? <p className="home-state">Loading trending products...</p> : null}
-      {productsError ? <p className="home-state home-error">{productsError}</p> : null}
+      {loading ? <p className="home-state">Loading...</p> : null}
 
-      {!categoriesLoading && !categoriesError && (
+      {!loading && (
         <>
           <section className="home-section" aria-labelledby="collections-heading" id="collections">
             <div className="home-section-header">
@@ -174,7 +171,7 @@ function Home() {
                   </Link>
                 ))}
               </section>
-            ) : productsLoading ? null : (
+            ) : loading ? null : (
               <div className="home-empty-state">
                 <h3>No trending products yet</h3>
                 <p>

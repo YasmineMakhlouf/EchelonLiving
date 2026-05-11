@@ -2,34 +2,31 @@
  * Login
  * Frontend pages module for Echelon Living app.
  */
-import { useState } from "react";
 import type { FormEvent } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
-import { login as performLogin } from "../services/authService";
+import { setLoginEmail, setLoginError, setLoginPassword } from "../../../store/slices/authUiSlice";
+import type { RootState } from "../../../store";
+import { useAuthRedux } from "../../../store/hooks/useAuthRedux";
 
 function Login() {
-  const { login } = useAuth();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuthRedux();
+  const dispatch = useDispatch();
+  const email = useSelector((state: RootState) => state.authUi.loginEmail);
+  const password = useSelector((state: RootState) => state.authUi.loginPassword);
+  const error = useSelector((state: RootState) => state.authUi.loginError);
+  const isSubmitting = useSelector((state: RootState) => state.authUi.loginSubmitting);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+    dispatch(setLoginError(null));
 
     try {
-      const { user, token } = await performLogin({ email, password });
-      login(user, token);
+      await login(email, password);
       window.location.assign("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed. Please try again.";
-      setError(message);
-    } finally {
-      setIsSubmitting(false);
+      dispatch(setLoginError(message));
     }
   };
 
@@ -48,7 +45,7 @@ function Login() {
           id="email"
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => dispatch(setLoginEmail(event.target.value))}
           required
         />
 
@@ -57,7 +54,7 @@ function Login() {
           id="password"
           type="password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => dispatch(setLoginPassword(event.target.value))}
           required
         />
 

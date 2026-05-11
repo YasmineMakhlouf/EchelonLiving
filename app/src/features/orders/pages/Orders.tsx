@@ -2,44 +2,52 @@
  * Orders
  * Frontend pages module for Echelon Living app.
  */
-import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../../../context/AuthContext";
+import { useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { getOrderHistory } from "../services/ordersService";
-import type { OrderWithItems } from "../services/ordersService";
+import type { RootState } from "../../../store";
+import {
+  setOrders,
+  setLoading,
+  setError,
+  clearError,
+} from "../../../store/slices/ordersDataSlice";
 import "../../../styles/Orders.css";
 
 export default function Orders() {
-  const { token } = useAuth();
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const orders = useSelector((state: RootState) => state.ordersData.orders);
+  const loading = useSelector((state: RootState) => state.ordersData.loading);
+  const error = useSelector((state: RootState) => state.ordersData.error);
 
   useEffect(() => {
     const fetchOrderHistory = async () => {
-      if (!token) {
-        setLoading(false);
-        setOrders([]);
+      if (!token || !user) {
+        dispatch(setLoading(false));
+        dispatch(setOrders([]));
         return;
       }
 
       try {
-        setLoading(true);
-        setError(null);
-        const history = await getOrderHistory();
-        setOrders(history);
+        dispatch(setLoading(true));
+        dispatch(clearError());
+        const history = await getOrderHistory(user.id);
+        dispatch(setOrders(history));
       } catch (requestError) {
         const message = requestError instanceof Error
           ? requestError.message
           : "Failed to load order history.";
-        setError(message);
-        setOrders([]);
+        dispatch(setError(message));
+        dispatch(setOrders([]));
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchOrderHistory();
-  }, [token]);
+  }, [token, user, dispatch]);
 
   const grandTotal = useMemo(() => {
     return orders.reduce((sum, order) => sum + Number(order.total_price), 0);
@@ -91,7 +99,13 @@ export default function Orders() {
               <header className="order-card-header">
                 <div>
                   <h2>Order #{order.id}</h2>
-                  <p>Placed on {new Date(order.created_at).toLocaleString()}</p>
+                  <p>
+                    {order.created_at
+                      ? `Placed on ${new Date(order.created_at).toLocaleString()}`
+                      : order.status
+                        ? `Status: ${order.status}`
+                        : "Order details unavailable"}
+                  </p>
                 </div>
                 <div className="order-total">${Number(order.total_price).toFixed(2)}</div>
               </header>

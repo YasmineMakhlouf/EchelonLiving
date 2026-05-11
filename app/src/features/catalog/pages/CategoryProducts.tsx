@@ -3,40 +3,54 @@
  * Frontend pages module for Echelon Living app.
  */
 import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
 import useCatalogRefresh from "../../../hooks/useCatalogRefresh";
-import type { Category, Product } from "../services/catalogService";
-import {
-  getCategories,
-  getProducts,
-} from "../services/catalogService";
+import type { RootState } from "../../../store";
+import type { Product } from "../services/catalogService";
+import { getCategories, getProducts } from "../services/catalogService";
 import { addToCart } from "../../cart/services/cartService";
+import ProductCard from "../../../components/ui/ProductCard";
 import { toAbsoluteImageUrl } from "../../../api/image";
+import {
+  setProducts,
+  setCategories,
+  setLoading,
+  setError,
+  clearError,
+} from "../../../store/slices/catalogDataSlice";
+import {
+  setCategorySearchInput,
+  setCategoryMinPriceInput,
+  setCategoryMaxPriceInput,
+  setCategoryColorInput,
+  resetCategoryFilters,
+} from "../../../store/slices/catalogUiSlice";
 import "../../../styles/Products.css";
 
 export default function CategoryProducts() {
-  const { token } = useAuth();
+  const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
+  const products = useSelector((state: RootState) => state.catalogData.products);
+  const categories = useSelector((state: RootState) => state.catalogData.categories);
+  const loading = useSelector((state: RootState) => state.catalogData.loading);
+  const error = useSelector((state: RootState) => state.catalogData.error);
+  const { searchInput, minPriceInput, maxPriceInput, colorInput } = useSelector(
+    (state: RootState) => state.catalogUi.categoryProductsFilters
+  );
   const catalogRevision = useCatalogRefresh();
   const { id } = useParams();
   const categoryId = Number(id);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const colorOptions = ["", "black", "white", "red", "blue", "brown", "gray", "green", "yellow"];
   const [addingToCart, setAddingToCart] = useState<number | null>(null);
-  const [cartMessages, setCartMessages] = useState<{ [key: number]: string }>({});
-  const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
-  const [minPriceInput, setMinPriceInput] = useState(searchParams.get("minPrice") ?? "");
-  const [maxPriceInput, setMaxPriceInput] = useState(searchParams.get("maxPrice") ?? "");
-  const [colorInput, setColorInput] = useState(searchParams.get("color") ?? "");
+  const [cartMessages, setCartMessages] = useState<Record<number, string>>({});
 
   const search = searchParams.get("search");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const color = searchParams.get("color");
-  const colorOptions = ["", "black", "white", "red", "blue", "brown", "gray", "green", "yellow"];
+
   const activeFilters = useMemo(
     () => [
       search ? `Search: ${search}` : null,
@@ -47,14 +61,14 @@ export default function CategoryProducts() {
     [search, color, minPrice, maxPrice]
   );
 
-  const hasValidCategoryId = useMemo(() => !Number.isNaN(categoryId) && categoryId > 0, [categoryId]);
+  const hasValidCategoryId = !Number.isNaN(categoryId) && categoryId > 0;
 
   useEffect(() => {
-    setSearchInput(search ?? "");
-    setMinPriceInput(minPrice ?? "");
-    setMaxPriceInput(maxPrice ?? "");
-    setColorInput(color ?? "");
-  }, [search, minPrice, maxPrice, color]);
+    dispatch(setCategorySearchInput(search ?? ""));
+    dispatch(setCategoryMinPriceInput(minPrice ?? ""));
+    dispatch(setCategoryMaxPriceInput(maxPrice ?? ""));
+    dispatch(setCategoryColorInput(color ?? ""));
+  }, [search, minPrice, maxPrice, color, dispatch]);
 
   const updateQueryParams = (updates: Record<string, string | null>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -81,36 +95,26 @@ export default function CategoryProducts() {
   };
 
   const handleClearFilters = () => {
-    setSearchInput("");
-    setMinPriceInput("");
-    setMaxPriceInput("");
-    setColorInput("");
-
-    updateQueryParams({
-      search: null,
-      minPrice: null,
-      maxPrice: null,
-      color: null,
-    });
+    dispatch(resetCategoryFilters());
+    updateQueryParams({ search: null, minPrice: null, maxPrice: null, color: null });
   };
 
   useEffect(() => {
     if (!hasValidCategoryId) {
-      setError("Invalid category.");
-      setLoading(false);
+      dispatch(setError("Invalid category."));
+      dispatch(setLoading(false));
       return;
     }
 
     const fetchCategoryProducts = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        dispatch(setLoading(true));
+        dispatch(clearError());
 
-        const categories = await getCategories();
-        const foundCategory = categories.find(c => c.id === categoryId);
-        setCategory(foundCategory || null);
+        const cats = await getCategories();
+        dispatch(setCategories(cats));
 
-        const products = await getProducts({
+        const prods = await getProducts({
           categoryId: String(categoryId),
           search: search ?? undefined,
           minPrice: minPrice ?? undefined,
@@ -118,18 +122,20 @@ export default function CategoryProducts() {
           color: color ?? undefined,
         });
 
-        setProducts(products);
+        dispatch(setProducts(prods));
       } catch (fetchError) {
         console.error("Failed to fetch category products:", fetchError);
-        setError("Failed to load this category. Please try again later.");
-        setProducts([]);
+        dispatch(setError("Failed to load this category. Please try again later."));
+        dispatch(setProducts([]));
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchCategoryProducts();
-  }, [categoryId, hasValidCategoryId, search, minPrice, maxPrice, color, catalogRevision]);
+  }, [categoryId, hasValidCategoryId, search, minPrice, maxPrice, color, catalogRevision, dispatch]);
+
+  const category = categories.find((c) => c.id === categoryId) ?? null;
 
   const handleAddToCart = async (product: Product) => {
     if (!token) {
@@ -160,9 +166,9 @@ export default function CategoryProducts() {
           [product.id]: "",
         }));
       }, 3000);
-    } catch (addError) {
-      console.error("Failed to add to cart:", addError);
-      const message = addError instanceof Error ? addError.message : "Failed to add item. Please try again.";
+    } catch (err) {
+      console.error("Failed to add to cart:", err);
+      const message = err instanceof Error ? err.message : "Failed to add item. Please try again.";
       setCartMessages((prev) => ({
         ...prev,
         [product.id]: message,
@@ -172,66 +178,37 @@ export default function CategoryProducts() {
     }
   };
 
-  if (loading) {
+  if (!hasValidCategoryId) {
     return (
-      <main className="products-container" aria-busy="true">
-        <p className="loading" role="status" aria-live="polite">Loading products...</p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="products-container">
-        <p className="error" role="alert">{error}</p>
+      <main className="category-products-page">
+        <h1>Category</h1>
+        <p className="categories-error">Invalid category.</p>
       </main>
     );
   }
 
   return (
-    <main className="products-container">
+    <main className="category-products-page page-fade-in">
       <header className="products-header">
         <div>
           <p className="products-eyebrow">Category</p>
-          <h1>{category?.name ?? "Category Products"}</h1>
-          <p className="products-subtitle">
-            {category?.description ?? "Use filters to narrow down what fits your space."}
-          </p>
-
-          <div className="products-header-meta" aria-live="polite">
-            <span className="products-result-badge">{products.length} product{products.length === 1 ? "" : "s"}</span>
-            {activeFilters.length > 0 ? (
-              <span className="products-filter-badge">{activeFilters.length} active filter{activeFilters.length === 1 ? "" : "s"}</span>
-            ) : null}
-          </div>
-
-          {activeFilters.length > 0 ? (
-            <ul className="products-active-filters" aria-label="Active filters">
-              {activeFilters.map((filter) => (
-                <li key={filter} className="products-filter-pill">{filter}</li>
-              ))}
-            </ul>
-          ) : null}
+          <h1>{category ? category.name : "Category"}</h1>
+          <p className="products-subtitle">Browse items in this category.</p>
         </div>
-        <Link to="/categories" className="products-nav-link">
-          Back to categories
-        </Link>
       </header>
 
       <div className="products-layout">
-        <aside className="products-sidebar" aria-label="Product filters">
+        <aside className="products-sidebar" aria-label="Filters">
           <form className="products-search-form" onSubmit={handleFilterSubmit}>
-            <p className="products-filter-hint">Apply one or more filters, then press Search.</p>
-
             <div>
               <h3>Search</h3>
               <div className="filter-group">
-                <label htmlFor="product-search">Product name</label>
+                <label htmlFor="category-search">Product name</label>
                 <input
-                  id="product-search"
+                  id="category-search"
                   type="search"
                   value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
+                  onChange={(e) => dispatch(setCategorySearchInput(e.target.value))}
                   placeholder="Find products..."
                 />
               </div>
@@ -240,11 +217,11 @@ export default function CategoryProducts() {
             <div>
               <h3>Color</h3>
               <div className="filter-group">
-                <label htmlFor="product-color">Select color</label>
+                <label htmlFor="category-color">Select color</label>
                 <select
-                  id="product-color"
+                  id="category-color"
                   value={colorInput}
-                  onChange={(event) => setColorInput(event.target.value)}
+                  onChange={(e) => dispatch(setCategoryColorInput(e.target.value))}
                 >
                   {colorOptions.map((option) => (
                     <option key={option || "all"} value={option}>
@@ -258,34 +235,34 @@ export default function CategoryProducts() {
             <div>
               <h3>Price</h3>
               <div className="filter-group">
-                <label htmlFor="product-min-price">Min price</label>
+                <label htmlFor="category-min-price">Min price</label>
                 <input
-                  id="product-min-price"
+                  id="category-min-price"
                   type="number"
                   min="0"
                   step="0.01"
                   value={minPriceInput}
-                  onChange={(event) => setMinPriceInput(event.target.value)}
+                  onChange={(e) => dispatch(setCategoryMinPriceInput(e.target.value))}
                   placeholder="$0.00"
                 />
               </div>
               <div className="filter-group">
-                <label htmlFor="product-max-price">Max price</label>
+                <label htmlFor="category-max-price">Max price</label>
                 <input
-                  id="product-max-price"
+                  id="category-max-price"
                   type="number"
                   min="0"
                   step="0.01"
                   value={maxPriceInput}
-                  onChange={(event) => setMaxPriceInput(event.target.value)}
+                  onChange={(e) => dispatch(setCategoryMaxPriceInput(e.target.value))}
                   placeholder="$1000.00"
                 />
               </div>
             </div>
 
             <div className="filter-actions">
-              <button type="submit" className="add-to-cart-btn" aria-label="Apply product filters">
-                Search
+              <button type="submit" className="add-to-cart-btn">
+                Apply Filters
               </button>
               <button type="button" className="filter-clear-btn" onClick={handleClearFilters}>
                 Clear Filters
@@ -294,74 +271,51 @@ export default function CategoryProducts() {
           </form>
         </aside>
 
-        <section className="products-content" aria-live="polite">
-          {products.length === 0 ? (
-            <p className="no-products">No products in this category match your filters.</p>
-          ) : (
-            <ul className="products-grid products-grid-list" role="list">
-              {products.map((product, index) => {
-                const productImageUrl = toAbsoluteImageUrl(product.image_url);
-                const inStock = (product.stock_quantity ?? 0) > 0;
+        <section className="products-main" aria-live="polite">
+          {error ? <p className="error">{error}</p> : null}
 
-                return (
-                  <li
-                    key={product.id}
-                    className="product-card product-card-animated"
-                    style={{ animationDelay: `${Math.min(index * 60, 420)}ms` }}
-                  >
-                    <div className="product-media">
-                      {productImageUrl ? (
-                        <img
-                          src={productImageUrl}
-                          alt={product.name}
-                          className="product-image"
-                        />
-                      ) : (
-                        <div className="product-image-placeholder" aria-hidden="true">No image</div>
-                      )}
-                      <span className={`product-stock ${inStock ? "in" : "out"}`}>
-                        {inStock ? "In stock" : "Out of stock"}
-                      </span>
-                    </div>
+          {!error && loading ? (
+            <p className="products-state">Loading products...</p>
+          ) : null}
 
-                    <div className="product-info">
-                      <h2 className="product-name">{product.name}</h2>
-                      {product.category_name && (
-                        <p className="product-category">{product.category_name}</p>
-                      )}
-                      <p className="product-price">${Number(product.price).toFixed(2)}</p>
-                      {product.description && (
-                        <p className="product-description">{product.description}</p>
-                      )}
+          {!error && !loading && products.length === 0 ? (
+            <div className="products-empty-state" role="status">
+              <h2>No products found</h2>
+              <p>Try adjusting your search, selected color, or price range.</p>
+              {activeFilters.length > 0 ? (
+                <button type="button" className="empty-state-action" onClick={handleClearFilters}>
+                  Reset Filters
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
-                      <div className="product-actions">
-                        <Link to={`/products/${product.id}`} className="product-details-link">
-                          View details
-                        </Link>
-                        <button
-                          className="add-to-cart-btn"
-                          onClick={() => handleAddToCart(product)}
-                          disabled={addingToCart === product.id || !inStock}
-                          aria-label={`Add ${product.name} to cart`}
-                        >
-                          {addingToCart === product.id ? "Adding..." : inStock ? "Add to Cart" : "Out of Stock"}
-                        </button>
-                      </div>
-
-                      {cartMessages[product.id] && (
-                        <p
-                          className={`cart-message ${cartMessages[product.id].includes("Failed") || cartMessages[product.id].includes("log in") ? "error" : "success"}`}
-                          role="status"
-                        >
-                          {cartMessages[product.id]}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          {!error && !loading && products.length > 0 ? (
+            <div className="products-grid">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  price={product.price}
+                  color={product.color}
+                  image_url={product.image_url}
+                  category_name={product.category_name}
+                  description={product.description}
+                  stock_quantity={product.stock_quantity}
+                  onAddToCart={() => handleAddToCart(product)}
+                  isLoading={addingToCart === product.id}
+                  message={cartMessages[product.id]}
+                  messageType={
+                    cartMessages[product.id]?.includes("Failed") ||
+                    cartMessages[product.id]?.includes("log in")
+                      ? "error"
+                      : "success"
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
         </section>
       </div>
     </main>

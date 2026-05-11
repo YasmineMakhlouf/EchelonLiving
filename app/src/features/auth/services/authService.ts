@@ -3,7 +3,7 @@
  * Auth feature service: handles login, register, JWT parsing, and error handling.
  */
 import axios from "axios";
-import api from "../../../api/axios";
+import { graphqlRequest } from "../../../api/graphql";
 
 export interface JwtPayload {
   id: number;
@@ -38,21 +38,23 @@ export interface ApiErrorResponse {
   error?: string;
 }
 
-const parseJwtPayload = (token: string): JwtPayload | null => {
-  try {
-    const base64Payload = token.split(".")[1];
-    if (!base64Payload) {
-      return null;
-    }
+interface LoginMutationData {
+  login: {
+    id: number;
+    email: string;
+    role: string;
+    token: string | null;
+  } | null;
+}
 
-    const normalizedPayload = base64Payload.replace(/-/g, "+").replace(/_/g, "/");
-    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, "=");
-    const payload = JSON.parse(atob(paddedPayload)) as JwtPayload;
-    return payload;
-  } catch {
-    return null;
-  }
-};
+interface RegisterMutationData {
+  register: {
+    id: number;
+    email: string;
+    role: string;
+    token?: string | null;
+  };
+}
 
 const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => {
   const apiError = error as {
@@ -63,8 +65,7 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
     message?: string;
   };
 
-  if (!axios.isAxiosError(error)) {
-    return "Unable to complete authentication. Please try again.";
+  if (!axios.isAxiosError(error)) {    return "Unable to complete authentication. Please try again.";
   }
 
   if (!apiError.response) {
@@ -83,22 +84,31 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
 };
 
 export const login = (credentials: LoginCredentials): Promise<AuthResponse> => {
-  return api.post<{ token: string }>("/auth/login", credentials)
-    .then((response) => {
-      const token = response.data.token;
-      const payload = parseJwtPayload(token);
-
-      if (!payload) {
-        throw new Error("Invalid authentication token");
+  return graphqlRequest<LoginMutationData>(
+    `
+      mutation Login($email: String!, $password: String!) {
+        login(email: $email, password: $password) {
+          id
+          email
+          role
+          token
+        }
+      }
+    `,
+    credentials
+  )
+    .then((data) => {
+      if (!data.login || !data.login.token) {
+        throw new Error("Invalid email or password");
       }
 
       return {
-        token,
+        token: data.login.token,
         user: {
-          id: payload.id,
-          role: payload.role,
+          id: data.login.id,
+          role: data.login.role,
           name: "",
-          email: credentials.email,
+          email: data.login.email,
         },
       };
     })
@@ -108,28 +118,52 @@ export const login = (credentials: LoginCredentials): Promise<AuthResponse> => {
 };
 
 export const register = (data: RegisterData): Promise<AuthResponse> => {
-  return api.post("/auth/register", data)
+  return graphqlRequest<RegisterMutationData>(
+    `
+      mutation Register($email: String!, $password: String!, $role: String) {
+        register(email: $email, password: $password, role: $role) {
+          id
+          email
+          role
+        }
+      }
+    `,
+    {
+      email: data.email,
+      password: data.password,
+      role: "customer",
+    }
+  )
     .then(() => {
-      return api.post<{ token: string }>("/auth/login", {
+      return graphqlRequest<LoginMutationData>(
+        `
+          mutation Login($email: String!, $password: String!) {
+            login(email: $email, password: $password) {
+              id
+              email
+              role
+              token
+            }
+          }
+        `,
+        {
         email: data.email,
         password: data.password,
-      });
+        }
+      );
     })
-    .then((loginResponse) => {
-      const token = loginResponse.data.token;
-      const payload = parseJwtPayload(token);
-
-      if (!payload) {
+    .then((loginData) => {
+      if (!loginData.login || !loginData.login.token) {
         throw new Error("Invalid authentication token");
       }
 
       return {
-        token,
+        token: loginData.login.token,
         user: {
-          id: payload.id,
-          role: payload.role,
+          id: loginData.login.id,
+          role: loginData.login.role,
           name: data.name,
-          email: data.email,
+          email: loginData.login.email,
         },
       };
     })

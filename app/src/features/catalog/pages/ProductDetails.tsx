@@ -2,65 +2,59 @@
  * ProductDetails
  * Frontend pages module for Echelon Living app.
  */
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { useAuth } from "../../../context/AuthContext";
 import useCatalogRefresh from "../../../hooks/useCatalogRefresh";
-import type { Product } from "../services/catalogService";
+import type { RootState } from "../../../store";
 import { getProductById } from "../services/catalogService";
 import { addToCart } from "../../cart/services/cartService";
 import { toAbsoluteImageUrl } from "../../../api/image";
+import { setLoading, setError, clearError } from "../../../store/slices/catalogDataSlice";
+import {
+  setProduct,
+  setQuantity,
+  setAddingToCart,
+  setCartMessage,
+  clearCartMessage,
+} from "../../../store/slices/productDetailsSlice";
 import "../../../styles/ProductDetails.css";
 
-interface Review {
-  id: number;
-  product_id: number;
-  user_id: number;
-  user_name?: string;
-  rating: number;
-  comment: string;
-  created_at: string;
-}
-
-interface ProductWithReviews extends Product {
-  reviews?: Review[];
-}
-
 export default function ProductDetails() {
+  const dispatch = useDispatch();
   const catalogRevision = useCatalogRefresh();
   const { id } = useParams<{ id: string }>();
-  const { token } = useAuth();
-  const [product, setProduct] = useState<ProductWithReviews | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [addingToCart, setAddingToCart] = useState<boolean>(false);
-  const [cartMessage, setCartMessage] = useState<string>("");
+  const token = useSelector((state: RootState) => state.auth.token);
+  const loading = useSelector((state: RootState) => state.catalogData.loading);
+  const product = useSelector((state: RootState) => state.productDetails.product);
+  const quantity = useSelector((state: RootState) => state.productDetails.quantity);
+  const addingToCart = useSelector((state: RootState) => state.productDetails.addingToCart);
+  const cartMessage = useSelector((state: RootState) => state.productDetails.cartMessage);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        dispatch(setLoading(true));
+        dispatch(clearError());
         const data = await getProductById(Number(id));
-        setProduct(data as ProductWithReviews);
+        dispatch(setProduct(data));
       } catch (err) {
         console.error("Failed to fetch product:", err);
-        setError(err instanceof Error ? err.message : "Failed to load product. Please try again later.");
-        setProduct(null);
+        dispatch(setError(err instanceof Error ? err.message : "Failed to load product. Please try again later."));
+        dispatch(setProduct(null));
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     if (id) {
       fetchProduct();
     }
-  }, [id, catalogRevision]);
+  }, [id, catalogRevision, dispatch]);
 
   const handleAddToCart = async () => {
     if (!token) {
-      setCartMessage("Please log in to add items to cart");
+      dispatch(setCartMessage("Please log in to add items to cart"));
       return;
     }
 
@@ -69,29 +63,25 @@ export default function ProductDetails() {
     }
 
     try {
-      setAddingToCart(true);
-      setCartMessage("");
+      dispatch(setAddingToCart(true));
+      dispatch(clearCartMessage());
 
       await addToCart(product.id, quantity);
 
-      setCartMessage(`Added ${quantity} item(s) to cart!`);
-      setQuantity(1);
+      dispatch(setCartMessage(`Added ${quantity} item(s) to cart!`));
+      dispatch(setQuantity(1));
 
-      setTimeout(() => setCartMessage(""), 3000);
+      setTimeout(() => dispatch(clearCartMessage()), 3000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add item to cart. Please try again.";
-      setCartMessage(message);
+      dispatch(setCartMessage(message));
     } finally {
-      setAddingToCart(false);
+      dispatch(setAddingToCart(false));
     }
   };
 
   if (loading) {
     return <div className="product-details-container"><p className="loading">Loading product...</p></div>;
-  }
-
-  if (error) {
-    return <div className="product-details-container"><p className="error">{error}</p></div>;
   }
 
   if (!product) {
@@ -153,7 +143,7 @@ export default function ProductDetails() {
                   max={product.stock_quantity}
                   value={quantity}
                   onChange={(e) =>
-                    setQuantity(Math.min(Math.max(1, parseInt(e.target.value) || 1), product.stock_quantity ?? 1))
+                    dispatch(setQuantity(Math.min(Math.max(1, parseInt(e.target.value) || 1), product.stock_quantity ?? 1)))
                   }
                 />
               </div>

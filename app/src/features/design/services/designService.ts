@@ -3,6 +3,7 @@
  * Design feature service: handles design request submission.
  */
 import api from "../../../api/axios";
+import { graphqlRequest } from "../../../api/graphql";
 
 export interface DesignRequestPayload {
   title: string;
@@ -32,14 +33,25 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
   return apiError.response?.data?.message || apiError.response?.data?.error || apiError.message || fallbackMessage;
 };
 
-export const submitDesignRequest = (payload: DesignRequestPayload): Promise<void> => {
-  return api.post("/design-requests", {
-    title: payload.title.trim(),
-    notes: payload.notes?.trim() ?? "",
-    designDataUrl: payload.designDataUrl,
-  })
-    .then(() => {})
+export const submitDesignRequest = (data: { title: string; notes?: string; designDataUrl: string; userId: number }): Promise<{ id: number }> => {
+  return graphqlRequest<{ createDesignRequest: { id: number } }>(
+    `
+      mutation CreateDesignRequest($userId: Int!, $title: String!, $designDataUrl: String!, $notes: String) {
+        createDesignRequest(userId: $userId, title: $title, designDataUrl: $designDataUrl, notes: $notes) {
+          id
+        }
+      }
+    `,
+    {
+      userId: data.userId,
+      title: data.title,
+      designDataUrl: data.designDataUrl,
+      notes: data.notes,
+    },
+  )
+    .then((res) => res.createDesignRequest)
     .catch((error) => {
-      throw new Error(getApiErrorMessage(error, "Failed to submit your design request."));
+      console.error('Failed to submit design request:', error);
+      throw new Error(getApiErrorMessage(error, 'Failed to submit design request. Please try again.'));
     });
 };

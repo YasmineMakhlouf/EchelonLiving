@@ -2,7 +2,7 @@
  * ordersService
  * Orders feature service: handles order history retrieval.
  */
-import api from "../../../api/axios";
+import { graphqlRequest } from "../../../api/graphql";
 
 export interface OrderItem {
   id: number;
@@ -21,7 +21,8 @@ export interface OrderWithItems {
   id: number;
   user_id: number;
   total_price: number;
-  created_at: string;
+  status?: string;
+  created_at?: string;
   items: OrderItem[];
 }
 
@@ -41,9 +42,31 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
   return apiError.response?.data?.message || apiError.response?.data?.error || apiError.message || fallbackMessage;
 };
 
-export const getOrderHistory = (): Promise<OrderWithItems[]> => {
-  return api.get<OrderWithItems[]>("/orders/history")
-    .then((response) => response.data)
+export const getOrderHistory = (userId: number): Promise<OrderWithItems[]> => {
+  return graphqlRequest<any>(
+    `
+      query OrderHistory($userId: Int!) {
+        orderHistory(userId: $userId) {
+          id
+          userId
+          total
+          status
+        }
+      }
+    `,
+    { userId },
+  )
+    .then((res) => {
+      const raw = res.orderHistory || [];
+      // Normalize server response to the client shape and keep items empty unless the API exposes them.
+      return raw.map((o: any) => ({
+        id: o.id,
+        user_id: o.userId ?? o.user_id,
+        total_price: o.total ?? o.total_price,
+        status: o.status,
+        items: [],
+      }));
+    })
     .catch((error) => {
       const status = (error as { response?: { status?: number } }).response?.status;
 

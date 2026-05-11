@@ -1,0 +1,50 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AuthPayload {
+  email: String!
+  id: Int!
+  role: String!
+  token: String
+}
+
+type CartItem {
+  id: Int!
+  productId: Int!
+  quantity: Int!
+  userId: Int!
+}
+
+type Category {
+  id: Int!
+  name: String!
+}
+
+type Mutation {
+  addCartItem(productId: Int!, quantity: Int, userId: Int!): CartItem!
+  createOrder(status: String, total: String!, userId: Int!): Order!
+  login(email: String!, password: String!): AuthPayload
+  register(email: String!, password: String!, role: String): AuthPayload!
+}
+
+type Order {
+  id: Int!
+  status: String!
+  total: String!
+  userId: Int!
+}
+
+type Product {
+  description: String
+  id: Int!
+  name: String!
+  price: String!
+}
+
+type Query {
+  categories: [Category!]!
+  product(id: Int!): Product
+  products: [Product!]!
+  productsByCategory(categoryId: Int!): [Product!]!
+}

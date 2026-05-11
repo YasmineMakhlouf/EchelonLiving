@@ -3,14 +3,18 @@
  * Frontend UI components module for Echelon Living app.
  */
 import { Link, NavLink } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useDispatch, useSelector } from "react-redux";
+import { clearAuth } from "../../store/slices/authSlice";
+import type { RootState } from "../../store";
 import "../../styles/layout/Navbar.css";
 
 function Navbar() {
-  const { token, logout, user } = useAuth();
+  const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const handleLogout = () => {
-    logout();
+    dispatch(clearAuth());
     window.location.assign("/");
   };
 

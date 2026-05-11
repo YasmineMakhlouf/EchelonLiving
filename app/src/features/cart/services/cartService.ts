@@ -3,6 +3,7 @@
  * Cart feature service: handles cart operations (fetch, update, remove, checkout).
  */
 import api from "../../../api/axios";
+import { graphqlRequest } from "../../../api/graphql";
 
 export interface CartItem {
   id: number;
@@ -25,6 +26,39 @@ export interface ApiErrorResponse {
   message?: string;
   error?: string;
 }
+
+interface CreateOrderMutationData {
+  createOrder: {
+    id: number;
+  };
+}
+
+interface AddCartItemMutationData {
+  addCartItem: {
+    id: number;
+  };
+}
+
+interface StoredAuthUser {
+  id?: number;
+}
+
+const getCurrentUserId = (): number | null => {
+  try {
+    const authUser = localStorage.getItem("auth_user");
+    const token = localStorage.getItem("token");
+
+    // Require both a stored user and a valid token before treating user as authenticated.
+    if (!authUser || !token) {
+      return null;
+    }
+
+    const parsed = JSON.parse(authUser) as StoredAuthUser;
+    return typeof parsed.id === "number" ? parsed.id : null;
+  } catch {
+    return null;
+  }
+};
 
 const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => {
   const apiError = error as {
@@ -49,9 +83,21 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
   );
 };
 
-export const getCart = (): Promise<CartItem[]> => {
-  return api.get<CartItem[]>("/cart-items")
-    .then((res) => res.data)
+export const getCart = (userId: number): Promise<CartItem[]> => {
+    return graphqlRequest<{ cartItems: CartItem[] }>(
+    `
+      query CartItems($userId: Int!) {
+        cartItems(userId: $userId) {
+          id
+          user_id: userId
+          product_id: productId
+          quantity
+        }
+      }
+    `,
+    { userId },
+  )
+    .then((data) => data.cartItems || [])
     .catch((error) => {
       const status = (error as { response?: { status?: number } }).response?.status;
 
@@ -59,8 +105,8 @@ export const getCart = (): Promise<CartItem[]> => {
         return [];
       }
 
-      console.error("Failed to fetch cart:", error);
-      throw new Error("Failed to load cart. Please try again later.");
+      console.error('Failed to fetch cart:', error);
+      throw new Error('Failed to load cart. Please try again later.');
     });
 };
 
@@ -68,17 +114,33 @@ export const updateQuantity = (cartItemId: number, quantity: number): Promise<Ca
   if (quantity < 1) {
     return Promise.reject(new Error("Quantity must be at least 1"));
   }
-
-  return api.put<CartItem>(`/cart-items/${cartItemId}`, { quantity })
-    .then((res) => res.data)
+  return graphqlRequest<{ updateCartItem: CartItem }>(
+    `
+      mutation UpdateCartItem($id: Int!, $quantity: Int!) {
+        updateCartItem(id: $id, quantity: $quantity) {
+          id
+          quantity
+        }
+      }
+    `,
+    { id: cartItemId, quantity },
+  )
+    .then((data) => data.updateCartItem)
     .catch((error) => {
-      console.error("Failed to update cart item:", error);
-      throw new Error(getApiErrorMessage(error, "Failed to update item. Please try again."));
+      console.error('Failed to update cart item:', error);
+      throw new Error(getApiErrorMessage(error, 'Failed to update item. Please try again.'));
     });
 };
 
 export const removeItem = (cartItemId: number): Promise<void> => {
-  return api.delete(`/cart-items/${cartItemId}`)
+  return graphqlRequest<{ removeCartItem: boolean }>(
+    `
+      mutation RemoveCartItem($id: Int!) {
+        removeCartItem(id: $id)
+      }
+    `,
+    { id: cartItemId },
+  )
     .then(() => {})
     .catch((error) => {
       const status = (error as { response?: { status?: number } }).response?.status;
@@ -87,17 +149,28 @@ export const removeItem = (cartItemId: number): Promise<void> => {
         return;
       }
 
-      console.error("Failed to remove cart item:", error);
-      throw new Error(getApiErrorMessage(error, "Failed to remove item. Please try again."));
+      console.error('Failed to remove cart item:', error);
+      throw new Error(getApiErrorMessage(error, 'Failed to remove item. Please try again.'));
     });
 };
 
-export const checkout = (): Promise<{ orderId?: number }> => {
-  return api.post<CheckoutResponse>("/orders", {})
-    .then((response) => {
-      const createdOrder = response.data?.data ?? response.data;
-      const orderId = createdOrder?.id;
-      return { orderId };
+export const checkout = (userId: number, total: number): Promise<{ orderId?: number }> => {
+  return graphqlRequest<CreateOrderMutationData>(
+    `
+      mutation CreateOrder($userId: Int!, $total: String!, $status: String) {
+        createOrder(userId: $userId, total: $total, status: $status) {
+          id
+        }
+      }
+    `,
+    {
+      userId,
+      total: String(total),
+      status: "pending",
+    }
+  )
+    .then((data) => {
+      return { orderId: data.createOrder?.id };
     })
     .catch((error) => {
       const status = (error as { response?: { status?: number } }).response?.status;
@@ -112,10 +185,26 @@ export const checkout = (): Promise<{ orderId?: number }> => {
 };
 
 export const addToCart = (productId: number, quantity: number = 1): Promise<void> => {
-  return api.post("/cart-items", {
-    product_id: productId,
-    quantity,
-  })
+  const userId = getCurrentUserId();
+
+  if (!userId) {
+    return Promise.reject(new Error("Please log in to add items to cart"));
+  }
+
+  return graphqlRequest<AddCartItemMutationData>(
+    `
+      mutation AddCartItem($userId: Int!, $productId: Int!, $quantity: Int) {
+        addCartItem(userId: $userId, productId: $productId, quantity: $quantity) {
+          id
+        }
+      }
+    `,
+    {
+      userId,
+      productId,
+      quantity,
+    }
+  )
     .then(() => {})
     .catch((error) => {
       const status = (error as { response?: { status?: number } }).response?.status;

@@ -10,11 +10,11 @@ const getCatalogEventsUrl = () => {
   const baseUrl = api.defaults.baseURL ?? "";
 
   if (!baseUrl) {
-    return "/api/v1/events/catalog";
+    return "/api/v1/events";
   }
 
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  return `${normalizedBase}/events/catalog`;
+  return `${normalizedBase}/events`;
 };
 
 export default function useCatalogRealtimeSync() {

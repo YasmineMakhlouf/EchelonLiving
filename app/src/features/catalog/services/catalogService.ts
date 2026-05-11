@@ -3,6 +3,7 @@
  * Catalog feature service: handles categories, products, filters, and images.
  */
 import api from "../../../api/axios";
+import { graphqlRequest } from "../../../api/graphql";
 import { toAbsoluteImageUrl } from "../../../api/image";
 
 export interface Category {
@@ -37,9 +38,136 @@ export interface ProductFilters {
   color?: string;
 }
 
+interface CategoriesQueryData {
+  categories: Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
+interface ProductsQueryData {
+  products: Array<{
+    id: number;
+    name: string;
+    description?: string | null;
+    price: string;
+    color?: string | null;
+    image_url?: string | null;
+    category_name?: string | null;
+    category_id?: number | null;
+    stock_quantity?: number | null;
+  }>;
+}
+
+interface ProductsByCategoryQueryData {
+  productsByCategory: Array<{
+    id: number;
+    name: string;
+    description?: string | null;
+    price: string;
+    color?: string | null;
+    image_url?: string | null;
+    category_name?: string | null;
+    category_id?: number | null;
+    stock_quantity?: number | null;
+  }>;
+}
+
+interface ProductQueryData {
+  product: {
+    id: number;
+    name: string;
+    description?: string | null;
+    price: string;
+    color?: string | null;
+    image_url?: string | null;
+    category_name?: string | null;
+    category_id?: number | null;
+    stock_quantity?: number | null;
+  } | null;
+}
+
+const toNumberPrice = (value: string): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const mapProduct = (product: {
+  id: number;
+  name: string;
+  description?: string | null;
+  price: string;
+  color?: string | null;
+  image_url?: string | null;
+  category_name?: string | null;
+  category_id?: number | null;
+  stock_quantity?: number | null;
+}): Product => {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description ?? undefined,
+    price: toNumberPrice(product.price),
+    color: product.color ?? undefined,
+    image_url: product.image_url ?? undefined,
+    category_name: product.category_name ?? undefined,
+    category_id: product.category_id ?? undefined,
+    stock_quantity: product.stock_quantity ?? undefined,
+  };
+};
+
+const applyProductFilters = (products: Product[], filters?: ProductFilters): Product[] => {
+  if (!filters) {
+    return products;
+  }
+
+  const normalizedSearch = filters.search?.trim().toLowerCase();
+  const normalizedColor = filters.color?.trim().toLowerCase();
+  const minPrice = filters.minPrice ? Number(filters.minPrice) : null;
+  const maxPrice = filters.maxPrice ? Number(filters.maxPrice) : null;
+
+  return products.filter((product) => {
+    const productName = product.name.toLowerCase();
+    const productDescription = (product.description ?? "").toLowerCase();
+    const productColor = (product.color ?? "").toLowerCase();
+    const productPrice = Number(product.price);
+
+    if (normalizedSearch && !productName.includes(normalizedSearch) && !productDescription.includes(normalizedSearch)) {
+      return false;
+    }
+
+    if (normalizedColor && !productColor.includes(normalizedColor)) {
+      return false;
+    }
+
+    if (minPrice !== null && Number.isFinite(minPrice) && productPrice < minPrice) {
+      return false;
+    }
+
+    if (maxPrice !== null && Number.isFinite(maxPrice) && productPrice > maxPrice) {
+      return false;
+    }
+
+    return true;
+  });
+};
+
 export const getCategories = (): Promise<Category[]> => {
-  return api.get<Category[]>("/categories")
-    .then((res) => res.data)
+  return graphqlRequest<CategoriesQueryData>(
+    `
+      query Categories {
+        categories {
+          id
+          name
+        }
+      }
+    `
+  )
+    .then((data) => data.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      description: "",
+    })))
     .catch((error) => {
       console.error("Failed to fetch categories:", error);
       throw new Error("Failed to load categories. Please try again.");
@@ -47,28 +175,47 @@ export const getCategories = (): Promise<Category[]> => {
 };
 
 export const getProducts = (filters?: ProductFilters): Promise<Product[]> => {
-  const params: Record<string, string | number> = {};
+  const categoryId = filters?.categoryId ? Number(filters.categoryId) : null;
+  const baseQuery = Number.isFinite(categoryId) && categoryId !== null
+    ? graphqlRequest<ProductsByCategoryQueryData>(
+      `
+        query ProductsByCategory($categoryId: Int!) {
+          productsByCategory(categoryId: $categoryId) {
+            id
+            name
+            description
+            price
+            color
+            image_url
+            category_name
+            category_id
+            stock_quantity
+          }
+        }
+      `,
+      { categoryId }
+    ).then((data) => data.productsByCategory)
+    : graphqlRequest<ProductsQueryData>(
+      `
+        query Products {
+          products {
+            id
+            name
+            description
+            price
+            color
+            image_url
+            category_name
+            category_id
+            stock_quantity
+          }
+        }
+      `
+    ).then((data) => data.products);
 
-  if (filters?.categoryId) {
-    params.category_id = filters.categoryId;
-  }
-  if (filters?.search) {
-    params.search = filters.search;
-  }
-  if (filters?.minPrice) {
-    params.min_price = filters.minPrice;
-  }
-  if (filters?.maxPrice) {
-    params.max_price = filters.maxPrice;
-  }
-  if (filters?.color) {
-    params.color = filters.color;
-  }
-
-  return api.get<Product[]>("/products", {
-    params: Object.keys(params).length > 0 ? params : undefined,
-  })
-    .then((res) => res.data)
+  return baseQuery
+    .then((products) => products.map(mapProduct))
+    .then((products) => applyProductFilters(products, filters))
     .catch((error) => {
       console.error("Failed to fetch products:", error);
       throw new Error("Failed to load products. Please try again.");
@@ -76,13 +223,25 @@ export const getProducts = (filters?: ProductFilters): Promise<Product[]> => {
 };
 
 export const getTrendingProducts = (): Promise<Product[]> => {
-  return api.get<Product[]>("/products", {
-    params: {
-      sortBy: "popular",
-      sortOrder: "DESC",
-    },
-  })
-    .then((res) => res.data)
+  return graphqlRequest<ProductsQueryData>(
+    `
+      query Products {
+        products {
+          id
+          name
+          description
+          price
+          color
+          image_url
+          category_name
+          category_id
+          stock_quantity
+        }
+      }
+    `
+  )
+    .then((data) => data.products.map(mapProduct))
+    .then((products) => products.slice(0, 8))
     .catch((error) => {
       console.error("Failed to fetch trending products:", error);
       throw new Error("Failed to load trending products. Please try again.");
@@ -90,8 +249,31 @@ export const getTrendingProducts = (): Promise<Product[]> => {
 };
 
 export const getProductById = (id: number): Promise<Product> => {
-  return api.get<Product>(`/products/${id}`)
-    .then((res) => res.data)
+  return graphqlRequest<ProductQueryData>(
+    `
+      query Product($id: Int!) {
+        product(id: $id) {
+          id
+          name
+          description
+          price
+          color
+          image_url
+          category_name
+          category_id
+          stock_quantity
+        }
+      }
+    `,
+    { id }
+  )
+    .then((data) => {
+      if (!data.product) {
+        throw new Error("Product not found.");
+      }
+
+      return mapProduct(data.product);
+    })
     .catch((error) => {
       console.error("Failed to fetch product:", error);
       throw new Error("Failed to load product. Please try again.");

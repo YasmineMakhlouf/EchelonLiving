@@ -2,59 +2,57 @@
  * Categories
  * Frontend pages module for Echelon Living app.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import useCatalogRefresh from "../../../hooks/useCatalogRefresh";
-import type { Category } from "../services/catalogService";
+import type { RootState } from "../../../store";
 import {
   getCategories,
   getCategoryImagesMap,
 } from "../services/catalogService";
+import {
+  setCategories,
+  setCategoryImages,
+  setLoading,
+  clearError,
+} from "../../../store/slices/catalogDataSlice";
 import "../../../styles/Categories.css";
 
 export default function Categories() {
+  const dispatch = useDispatch();
   const catalogRevision = useCatalogRefresh();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryImages, setCategoryImages] = useState<Record<number, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const categories = useSelector((state: RootState) => state.catalogData.categories);
+  const categoryImages = useSelector((state: RootState) => state.catalogData.categoryImages);
+  const loading = useSelector((state: RootState) => state.catalogData.loading);
 
   const spotlightCategories = useMemo(() => categories.slice(0, 4), [categories]);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        dispatch(setLoading(true));
+        dispatch(clearError());
 
         const nextCategories = await getCategories();
-        setCategories(nextCategories);
+        dispatch(setCategories(nextCategories));
 
         const imageMap = await getCategoryImagesMap(nextCategories);
-        setCategoryImages(imageMap);
+        dispatch(setCategoryImages(imageMap));
       } catch (err) {
         console.error("Failed to fetch categories:", err);
-        setError(err instanceof Error ? err.message : "Failed to load categories. Please try again.");
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchCategories();
-  }, [catalogRevision]);
+  }, [catalogRevision, dispatch]);
 
   if (loading) {
     return (
       <main className="categories-page">
         <p className="categories-state">Loading categories...</p>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main className="categories-page">
-        <p className="categories-state categories-error">{error}</p>
       </main>
     );
   }

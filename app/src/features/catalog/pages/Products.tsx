@@ -4,31 +4,44 @@
  */
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams } from "react-router-dom";
 import ProductCard from "../../../components/ui/ProductCard";
-import { useAuth } from "../../../context/AuthContext";
 import useCatalogRefresh from "../../../hooks/useCatalogRefresh";
+import type { RootState } from "../../../store";
 import type { Product } from "../services/catalogService";
 import { getProducts } from "../services/catalogService";
 import { addToCart } from "../../cart/services/cartService";
+import {
+  setProducts,
+  setLoading,
+  setError,
+  clearError,
+} from "../../../store/slices/catalogDataSlice";
+import {
+  setProductsSearchInput,
+  setProductsMinPriceInput,
+  setProductsMaxPriceInput,
+  setProductsColorInput,
+  resetProductsFilters,
+} from "../../../store/slices/catalogUiSlice";
 import "../../../styles/Products.css";
 
 const SKELETON_CARD_COUNT = 8;
 
 export default function Products() {
-  const { token } = useAuth();
+    const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
   const catalogRevision = useCatalogRefresh();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const products = useSelector((state: RootState) => state.catalogData.products);
+  const loading = useSelector((state: RootState) => state.catalogData.loading);
+  const error = useSelector((state: RootState) => state.catalogData.error);
+  const { searchInput, minPriceInput, maxPriceInput, colorInput } = useSelector(
+    (state: RootState) => state.catalogUi.productsFilters
+  );
   const [addingToCart, setAddingToCart] = useState<number | null>(null);
   const [cartMessages, setCartMessages] = useState<Record<number, string>>({});
-
-  const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
-  const [minPriceInput, setMinPriceInput] = useState(searchParams.get("minPrice") ?? "");
-  const [maxPriceInput, setMaxPriceInput] = useState(searchParams.get("maxPrice") ?? "");
-  const [colorInput, setColorInput] = useState(searchParams.get("color") ?? "");
 
   const categoryId = searchParams.get("categoryId");
   const search = searchParams.get("search");
@@ -40,11 +53,11 @@ export default function Products() {
   const hasActiveFilters = Boolean(categoryId || search || minPrice || maxPrice || color);
 
   useEffect(() => {
-    setSearchInput(search ?? "");
-    setMinPriceInput(minPrice ?? "");
-    setMaxPriceInput(maxPrice ?? "");
-    setColorInput(color ?? "");
-  }, [search, minPrice, maxPrice, color]);
+    dispatch(setProductsSearchInput(search ?? ""));
+    dispatch(setProductsMinPriceInput(minPrice ?? ""));
+    dispatch(setProductsMaxPriceInput(maxPrice ?? ""));
+    dispatch(setProductsColorInput(color ?? ""));
+  }, [search, minPrice, maxPrice, color, dispatch]);
 
   const updateQueryParams = (updates: Record<string, string | null>) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -71,10 +84,7 @@ export default function Products() {
   };
 
   const handleClearFilters = () => {
-    setSearchInput("");
-    setMinPriceInput("");
-    setMaxPriceInput("");
-    setColorInput("");
+    dispatch(resetProductsFilters());
 
     updateQueryParams({
       search: null,
@@ -87,8 +97,8 @@ export default function Products() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        dispatch(setLoading(true));
+        dispatch(clearError());
 
         const productData = await getProducts({
           categoryId: categoryId ?? undefined,
@@ -97,19 +107,18 @@ export default function Products() {
           maxPrice: maxPrice ?? undefined,
           color: color ?? undefined,
         });
-
-        setProducts(productData);
+  dispatch(setProducts(productData));
       } catch (err) {
         console.error("Failed to fetch products:", err);
-        setError(err instanceof Error ? err.message : "Failed to load products. Please try again later.");
-        setProducts([]);
+        const message = err instanceof Error ? err.message : "Failed to load products. Please try again later.";
+        dispatch(setError(message));
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchProducts();
-  }, [categoryId, search, minPrice, maxPrice, color, hasActiveFilters, catalogRevision]);
+  }, [categoryId, search, minPrice, maxPrice, color, hasActiveFilters, catalogRevision, dispatch]);
 
   const handleAddToCart = async (product: Product) => {
     if (!token) {
@@ -175,7 +184,7 @@ export default function Products() {
                   id="product-search"
                   type="search"
                   value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
+                  onChange={(event) => dispatch(setProductsSearchInput(event.target.value))}
                   placeholder="Find products..."
                 />
               </div>
@@ -188,7 +197,7 @@ export default function Products() {
                 <select
                   id="product-color"
                   value={colorInput}
-                  onChange={(event) => setColorInput(event.target.value)}
+                  onChange={(event) => dispatch(setProductsColorInput(event.target.value))}
                 >
                   {colorOptions.map((option) => (
                     <option key={option || "all"} value={option}>
@@ -209,7 +218,7 @@ export default function Products() {
                   min="0"
                   step="0.01"
                   value={minPriceInput}
-                  onChange={(event) => setMinPriceInput(event.target.value)}
+                  onChange={(event) => dispatch(setProductsMinPriceInput(event.target.value))}
                   placeholder="$0.00"
                 />
               </div>
@@ -221,7 +230,7 @@ export default function Products() {
                   min="0"
                   step="0.01"
                   value={maxPriceInput}
-                  onChange={(event) => setMaxPriceInput(event.target.value)}
+                  onChange={(event) => dispatch(setProductsMaxPriceInput(event.target.value))}
                   placeholder="$1000.00"
                 />
               </div>

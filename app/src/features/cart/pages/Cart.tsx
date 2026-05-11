@@ -3,53 +3,71 @@
  * Frontend pages module for Echelon Living app.
  */
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import type { CartItem } from "../services/cartService";
 import {
   getCart,
   updateQuantity,
   removeItem,
   checkout,
 } from "../services/cartService";
-import { useAuth } from "../../../context/AuthContext";
 import { getProductImagesMap } from "../../catalog/services/catalogService";
+import type { RootState } from "../../../store";
+import {
+  setItems,
+  setProductImages,
+  setLoading,
+  setError,
+  clearError,
+  setCheckoutLoading,
+  setCheckoutMessage,
+} from "../../../store/slices/cartDataSlice";
 import "../../../styles/Cart.css";
 
 export default function Cart() {
-  const { token } = useAuth();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [productImages, setProductImages] = useState<Record<number, string>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const cartItems = useSelector((state: RootState) => state.cartData.items);
+  const productImages = useSelector((state: RootState) => state.cartData.productImages);
+  const loading = useSelector((state: RootState) => state.cartData.loading);
+  const error = useSelector((state: RootState) => state.cartData.error);
+  const checkoutLoading = useSelector((state: RootState) => state.cartData.checkoutLoading);
+  const checkoutMessage = useSelector((state: RootState) => state.cartData.checkoutMessage);
   const [updating, setUpdating] = useState<number | null>(null);
   const [removing, setRemoving] = useState<number | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState<boolean>(false);
-  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
-      setLoading(false);
-      setError(null);
+      dispatch(setLoading(false));
+      dispatch(clearError());
       return;
     }
 
     const fetchCart = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        const items = await getCart();
-        setCartItems(items);
+        dispatch(setLoading(true));
+        dispatch(clearError());
+
+        if (!user) {
+          dispatch(setItems([]));
+          return;
+        }
+
+        const items = await getCart(user.id);
+        dispatch(setItems(items));
       } catch (err) {
         console.error("Failed to fetch cart:", err);
-        setError(err instanceof Error ? err.message : "Failed to load cart. Please try again later.");
-        setCartItems([]);
+        const message = err instanceof Error ? err.message : "Failed to load cart. Please try again later.";
+        dispatch(setError(message));
+        dispatch(setItems([]));
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     fetchCart();
-  }, [token]);
+  }, [token, user, dispatch]);
 
   useEffect(() => {
     if (!token || cartItems.length === 0) {
@@ -68,10 +86,7 @@ export default function Cart() {
       try {
         const nextImages = await getProductImagesMap(productIdsWithoutImage);
         if (Object.keys(nextImages).length > 0) {
-          setProductImages((prev) => ({
-            ...prev,
-            ...nextImages,
-          }));
+          dispatch(setProductImages(nextImages));
         }
       } catch {
         // Error handled silently
@@ -79,7 +94,7 @@ export default function Cart() {
     };
 
     fetchProductImages();
-  }, [cartItems, productImages, token]);
+  }, [cartItems, productImages, token, dispatch]);
 
   const handleUpdateQuantity = async (cartItemId: number, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -88,16 +103,16 @@ export default function Cart() {
 
     try {
       setUpdating(cartItemId);
-      setError(null);
+      dispatch(clearError());
 
-      await updateQuantity(cartItemId, newQuantity);
-
-      setCartItems((prev) =>
-        prev.map((item) => (item.id === cartItemId ? { ...item, quantity: newQuantity } : item))
-      );
+      const updatedItem = await updateQuantity(cartItemId, newQuantity);
+      dispatch(setItems(
+        cartItems.map((item) => (item.id === cartItemId ? updatedItem : item))
+      ));
     } catch (err) {
       console.error("Failed to update cart item:", err);
-      setError(err instanceof Error ? err.message : "Failed to update item. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to update item. Please try again.";
+      dispatch(setError(message));
     } finally {
       setUpdating(null);
     }
@@ -106,13 +121,14 @@ export default function Cart() {
   const handleRemoveItem = async (cartItemId: number) => {
     try {
       setRemoving(cartItemId);
-      setError(null);
+      dispatch(clearError());
 
       await removeItem(cartItemId);
-      setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
+      dispatch(setItems(cartItems.filter((item) => item.id !== cartItemId)));
     } catch (err) {
       console.error("Failed to remove cart item:", err);
-      setError(err instanceof Error ? err.message : "Failed to remove item. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to remove item. Please try again.";
+      dispatch(setError(message));
     } finally {
       setRemoving(null);
     }
@@ -120,25 +136,30 @@ export default function Cart() {
 
   const handleCheckout = async () => {
     try {
-      setCheckoutLoading(true);
-      setCheckoutMessage(null);
+      dispatch(setCheckoutLoading(true));
+      dispatch(setCheckoutMessage(null));
 
-      const { orderId } = await checkout();
+      if (!user) {
+        dispatch(setCheckoutMessage("You need to be logged in to checkout."));
+        return;
+      }
 
-      setCheckoutMessage(
-        orderId ? `Order placed successfully! Order ID: ${orderId}` : "Order placed successfully!"
-      );
-      setCartItems([]);
+      const totalPrice = cartItems.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+      const { orderId } = await checkout(user.id, totalPrice);
+
+      const successMessage = orderId ? `Order placed successfully! Order ID: ${orderId}` : "Order placed successfully!";
+      dispatch(setCheckoutMessage(successMessage));
+      dispatch(setItems([]));
 
       setTimeout(() => {
-        setCheckoutMessage(null);
+        dispatch(setCheckoutMessage(null));
       }, 5000);
     } catch (err) {
       console.error("Failed to checkout:", err);
       const message = err instanceof Error ? err.message : "Failed to place order. Please try again.";
-      setCheckoutMessage(message);
+      dispatch(setCheckoutMessage(message));
     } finally {
-      setCheckoutLoading(false);
+      dispatch(setCheckoutLoading(false));
     }
   };
 
