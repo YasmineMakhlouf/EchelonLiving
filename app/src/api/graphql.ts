@@ -26,18 +26,19 @@ export const graphqlRequest = async <TData>(query: string, variables?: object): 
     }
 
     return response.data.data;
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Log detailed info for debugging server 400/500 responses.
-    if (err?.response) {
-      console.error('GraphQL request failed:', err.response.status, err.response.data);
+    const error = err as { response?: { status?: number; data?: Record<string, unknown> }; message?: string };
+    if (error?.response) {
+      console.error('GraphQL request failed:', error.response.status, error.response.data);
 
       // Try to extract a useful message from GraphQL errors or API error payload.
-      const serverData = err.response.data as Partial<GraphQLResponse<any>> & { message?: string };
+      const serverData = error.response.data as Partial<GraphQLResponse<unknown>> & { message?: string };
       const serverMessage = serverData?.errors?.[0]?.message || serverData?.message;
-      throw new Error(serverMessage || `GraphQL request failed with status ${err.response.status}`);
+      throw new Error(serverMessage || `GraphQL request failed with status ${error.response.status}`);
     }
 
-    console.error('GraphQL request error:', err?.message || err);
+    console.error('GraphQL request error:', error?.message || error);
     throw err;
   }
 };

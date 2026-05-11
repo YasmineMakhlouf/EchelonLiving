@@ -2,7 +2,6 @@
  * categories
  * Frontend api module for Echelon Living app.
  */
-import api from "./axios";
 import { graphqlRequest } from "./graphql";
 
 export const getCategories = async () => {

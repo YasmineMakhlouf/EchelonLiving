@@ -18,8 +18,9 @@ export const useAuthRedux = () => {
       dispatch(setToken(nextToken));
       dispatch(setError(null));
       return nextUser;
-    } catch (err: any) {
-      dispatch(setError(err.message));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      dispatch(setError(message));
       throw err;
     } finally {
       dispatch(setLoading(false));
@@ -34,8 +35,9 @@ export const useAuthRedux = () => {
       dispatch(setToken(nextToken));
       dispatch(setError(null));
       return nextUser;
-    } catch (err: any) {
-      dispatch(setError(err.message));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      dispatch(setError(message));
       throw err;
     } finally {
       dispatch(setLoading(false));

@@ -2,7 +2,6 @@
  * cartService
  * Cart feature service: handles cart operations (fetch, update, remove, checkout).
  */
-import api from "../../../api/axios";
 import { graphqlRequest } from "../../../api/graphql";
 
 export interface CartItem {

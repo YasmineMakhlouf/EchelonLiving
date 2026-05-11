@@ -2,7 +2,6 @@
  * designService
  * Design feature service: handles design request submission.
  */
-import api from "../../../api/axios";
 import { graphqlRequest } from "../../../api/graphql";
 
 export interface DesignRequestPayload {

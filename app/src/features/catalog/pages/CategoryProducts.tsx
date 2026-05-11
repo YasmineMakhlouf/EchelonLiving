@@ -4,14 +4,13 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import useCatalogRefresh from "../../../hooks/useCatalogRefresh";
 import type { RootState } from "../../../store";
 import type { Product } from "../services/catalogService";
 import { getCategories, getProducts } from "../services/catalogService";
 import { addToCart } from "../../cart/services/cartService";
 import ProductCard from "../../../components/ui/ProductCard";
-import { toAbsoluteImageUrl } from "../../../api/image";
 import {
   setProducts,
   setCategories,
