@@ -97,6 +97,12 @@ export class CartItem {
 
   @Field(() => Int)
   quantity!: number;
+
+  @Field({ nullable: true })
+  product_name?: string;
+
+  @Field({ nullable: true })
+  price?: string;
 }
 
 @ObjectType()

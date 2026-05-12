@@ -3,9 +3,12 @@
  * Central route map for public, authenticated, and admin-only pages.
  */
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
 import AdminRoute from "./components/AdminRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout/Layout";
+import { clearAuth } from "./store/slices/authSlice";
 import useCatalogRealtimeSync from "./hooks/useCatalogRealtimeSync";
 import AdminCategoryManagement from "./features/admin/pages/AdminCategoryManagement";
 import AdminDesignRequests from "./features/admin/pages/AdminDesignRequests";
@@ -24,9 +27,22 @@ import Products from "./features/catalog/pages/Products";
 import DesignStudio from "./features/design/pages/DesignStudio";
 import Orders from "./features/orders/pages/Orders";
 
+const AUTH_LOGOUT_EVENT = "echelon-auth-logout";
+
 function App() {
+  const dispatch = useDispatch();
+
   // Global realtime listener that triggers catalog refresh events across pages.
   useCatalogRealtimeSync();
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      dispatch(clearAuth());
+    };
+
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout);
+    return () => window.removeEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout);
+  }, [dispatch]);
 
   return (
     <Layout>

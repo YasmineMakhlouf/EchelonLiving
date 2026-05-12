@@ -11,7 +11,9 @@ type AuthPayload {
 
 type CartItem {
   id: Int!
+  price: String
   productId: Int!
+  product_name: String
   quantity: Int!
   userId: Int!
 }
@@ -21,8 +23,21 @@ type Category {
   name: String!
 }
 
+type DesignRequest {
+  adminNotes: String
+  createdAt: String!
+  designDataUrl: String!
+  id: Int!
+  notes: String
+  reviewedAt: String
+  status: String!
+  title: String!
+  userId: Int!
+}
+
 type Mutation {
   addCartItem(productId: Int!, quantity: Int, userId: Int!): CartItem!
+  createDesignRequest(designDataUrl: String!, notes: String, title: String!, userId: Int!): DesignRequest!
   createOrder(status: String, total: String!, userId: Int!): Order!
   login(email: String!, password: String!): AuthPayload
   register(email: String!, password: String!, role: String): AuthPayload!

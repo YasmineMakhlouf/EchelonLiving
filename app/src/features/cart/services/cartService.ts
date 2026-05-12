@@ -3,6 +3,7 @@
  * Cart feature service: handles cart operations (fetch, update, remove, checkout).
  */
 import { graphqlRequest } from "../../../api/graphql";
+import { isTokenExpired } from "../../../utils/authToken";
 
 export interface CartItem {
   id: number;
@@ -42,6 +43,8 @@ interface StoredAuthUser {
   id?: number;
 }
 
+const AUTH_LOGOUT_EVENT = "echelon-auth-logout";
+
 const getCurrentUserId = (): number | null => {
   try {
     const authUser = localStorage.getItem("auth_user");
@@ -49,6 +52,13 @@ const getCurrentUserId = (): number | null => {
 
     // Require both a stored user and a valid token before treating user as authenticated.
     if (!authUser || !token) {
+      return null;
+    }
+
+    if (isTokenExpired(token)) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth_user");
+      window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
       return null;
     }
 
@@ -74,6 +84,11 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string): string => 
     return "You need to be logged in for this action.";
   }
 
+  const message = apiError.message?.toLowerCase() ?? "";
+  if (message.includes("no authorization header") || message.includes("unauthorized")) {
+    return "You need to be logged in for this action.";
+  }
+
   return (
     apiError.response?.data?.message ||
     apiError.response?.data?.error ||
@@ -90,6 +105,8 @@ export const getCart = (userId: number): Promise<CartItem[]> => {
           id
           user_id: userId
           product_id: productId
+          product_name
+          price
           quantity
         }
       }

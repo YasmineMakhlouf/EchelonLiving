@@ -87,16 +87,17 @@ export class OrderService {
 
   async create(payload: any) {
     const totalPrice = payload.total_price ?? payload.total ?? 0;
+    const status = payload.status ?? 'pending';
     const result = await this.repo.query(
-      'INSERT INTO orders (user_id, total_price) VALUES ($1, $2) RETURNING *',
-      [payload.user_id, totalPrice],
+      'INSERT INTO orders (user_id, total_price, final_price, status) VALUES ($1, $2, $3, $4) RETURNING *',
+      [payload.user_id, totalPrice, totalPrice, status],
     );
     const created = result[0];
 
     return {
       id: created.id,
       userId: created.user_id,
-      total: String(created.total_price ?? totalPrice),
+      total: String(created.total_price ?? created.final_price ?? totalPrice),
       status: created.status ?? 'pending',
       createdAt: created.created_at,
     };

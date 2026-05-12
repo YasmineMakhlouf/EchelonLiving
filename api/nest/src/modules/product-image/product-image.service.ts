@@ -11,4 +11,12 @@ export class ProductImageService {
       [productId],
     );
   }
+
+  async addImage(productId: number, imageUrl: string) {
+    const rows = await this.repo.query(
+      'INSERT INTO product_images (product_id, image_url, created_at) VALUES ($1, $2, NOW()) RETURNING id, product_id, image_url, created_at',
+      [productId, imageUrl],
+    );
+    return rows[0];
+  }
 }

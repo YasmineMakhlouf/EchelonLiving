@@ -1,12 +1,19 @@
 import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { CanActivate } from '@nestjs/common';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
 	async canActivate(context: ExecutionContext): Promise<boolean> {
-		// Get HTTP request for REST endpoints
-		const request = context.switchToHttp().getRequest();
+		// Handle both REST and GraphQL contexts
+		let request;
+		try {
+			const gqlContext = GqlExecutionContext.create(context);
+			request = gqlContext.getContext().req;
+		} catch {
+			request = context.switchToHttp().getRequest();
+		}
 		const authHeader = request?.headers?.authorization;
     
 		if (!authHeader) {

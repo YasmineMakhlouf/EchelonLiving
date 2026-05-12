@@ -30,11 +30,15 @@ export const graphqlRequest = async <TData>(query: string, variables?: object): 
     // Log detailed info for debugging server 400/500 responses.
     const error = err as { response?: { status?: number; data?: Record<string, unknown> }; message?: string };
     if (error?.response) {
-      console.error('GraphQL request failed:', error.response.status, error.response.data);
-
       // Try to extract a useful message from GraphQL errors or API error payload.
       const serverData = error.response.data as Partial<GraphQLResponse<unknown>> & { message?: string };
       const serverMessage = serverData?.errors?.[0]?.message || serverData?.message;
+      const normalizedMessage = (serverMessage || '').toLowerCase();
+
+      if (!normalizedMessage.includes('no authorization header')) {
+        console.error('GraphQL request failed:', error.response.status, error.response.data);
+      }
+
       throw new Error(serverMessage || `GraphQL request failed with status ${error.response.status}`);
     }
 

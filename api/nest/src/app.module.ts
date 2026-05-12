@@ -19,6 +19,7 @@ import { CatalogEventsModule } from './modules/catalog-events/catalog-events.mod
 import { ProductResolver } from './resolvers/product.resolver';
 import { AuthResolver } from './resolvers/auth.resolver';
 import { OrderResolver, CartResolver } from './resolvers/order.resolver';
+import { DesignRequestResolver } from './resolvers/design.resolver';
 
 @Module({
   imports: [
@@ -47,6 +48,6 @@ import { OrderResolver, CartResolver } from './resolvers/order.resolver';
     DesignRequestModule,
     CatalogEventsModule,
   ],
-  providers: [ProductResolver, AuthResolver, OrderResolver, CartResolver],
+  providers: [ProductResolver, AuthResolver, OrderResolver, CartResolver, DesignRequestResolver],
 })
 export class AppModule {}

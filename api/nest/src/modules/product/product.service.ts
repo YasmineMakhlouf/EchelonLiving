@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProductRepository } from './product.repository';
 
 type ProductQueryOptions = {
@@ -15,6 +15,16 @@ type ProductQueryOptions = {
   search?: string;
   sortBy?: string;
   sortOrder?: string;
+};
+
+type ProductWritePayload = {
+  name?: string;
+  description?: string;
+  price?: number;
+  color?: string;
+  size?: string;
+  stock_quantity?: number;
+  category_id?: number;
 };
 
 @Injectable()
@@ -129,5 +139,131 @@ export class ProductService {
     ) pi ON TRUE
     WHERE p.id = $1`, [id]);
     return rows[0] || null;
+  }
+
+  async create(payload: ProductWritePayload) {
+    const rows = await this.repo.query(
+      `WITH inserted AS (
+        INSERT INTO products (name, description, price, color, size, stock_quantity, category_id, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        RETURNING *
+      )
+      SELECT
+        i.id,
+        i.name,
+        i.description,
+        i.price,
+        pi.image_url,
+        i.color,
+        i.size,
+        i.stock_quantity,
+        i.category_id,
+        i.created_at,
+        c.name AS category_name
+      FROM inserted i
+      LEFT JOIN categories c ON i.category_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT image_url
+        FROM product_images
+        WHERE product_id = i.id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) pi ON TRUE`,
+      [
+        payload.name,
+        payload.description,
+        payload.price,
+        payload.color,
+        payload.size,
+        payload.stock_quantity,
+        payload.category_id,
+      ],
+    );
+
+    return rows[0];
+  }
+
+  async update(id: number, payload: ProductWritePayload) {
+    const updates: string[] = [];
+    const values: Array<string | number> = [];
+    let paramIndex = 1;
+
+    if (payload.name !== undefined) {
+      updates.push(`name = $${paramIndex++}`);
+      values.push(payload.name);
+    }
+    if (payload.description !== undefined) {
+      updates.push(`description = $${paramIndex++}`);
+      values.push(payload.description);
+    }
+    if (payload.price !== undefined) {
+      updates.push(`price = $${paramIndex++}`);
+      values.push(payload.price);
+    }
+    if (payload.color !== undefined) {
+      updates.push(`color = $${paramIndex++}`);
+      values.push(payload.color);
+    }
+    if (payload.size !== undefined) {
+      updates.push(`size = $${paramIndex++}`);
+      values.push(payload.size);
+    }
+    if (payload.stock_quantity !== undefined) {
+      updates.push(`stock_quantity = $${paramIndex++}`);
+      values.push(payload.stock_quantity);
+    }
+    if (payload.category_id !== undefined) {
+      updates.push(`category_id = $${paramIndex++}`);
+      values.push(payload.category_id);
+    }
+
+    if (updates.length === 0) {
+      return this.getById(id);
+    }
+
+    values.push(id);
+    const rows = await this.repo.query(
+      `WITH updated AS (
+        UPDATE products
+        SET ${updates.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      )
+      SELECT
+        u.id,
+        u.name,
+        u.description,
+        u.price,
+        pi.image_url,
+        u.color,
+        u.size,
+        u.stock_quantity,
+        u.category_id,
+        u.created_at,
+        c.name AS category_name
+      FROM updated u
+      LEFT JOIN categories c ON u.category_id = c.id
+      LEFT JOIN LATERAL (
+        SELECT image_url
+        FROM product_images
+        WHERE product_id = u.id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) pi ON TRUE`,
+      values,
+    );
+
+    if (!rows[0]) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return rows[0];
+  }
+
+  async remove(id: number) {
+    const rows = await this.repo.query('DELETE FROM products WHERE id = $1 RETURNING id', [id]);
+    if (!rows[0]) {
+      throw new NotFoundException('Product not found');
+    }
   }
 }
